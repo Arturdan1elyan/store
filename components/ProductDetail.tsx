@@ -1,110 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useOrders } from "@/context/OrderContext";
+import { Product } from "@/types/index";
 import Image from "next/image";
-import noImg from "@/public/no-image.png";
-import { Star } from "lucide-react";
 
-interface Rating {
-  rate: number;
-  count: number;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  price: string;
-  description: string;
-  category: string;
-  image: string;
-  rating: Rating;
-}
-
-export function ProductDetail({ id }: { id: string }) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchProduct() {
-      try {
-        const res = await fetch(`https://fakestoreapi.com/products/${id}`);
-        if (!res.ok) throw new Error("Failed to fetch product");
-        const data = await res.json();
-        setProduct(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProduct();
-  }, [id]);
-
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen text-gray-500 text-lg animate-pulse">
-        Loading product details...
-      </div>
-    );
-  if (error)
-    return (
-      <p className="text-center text-red-500 font-semibold mt-20">{error}</p>
-    );
-  if (!product)
-    return <p className="text-center text-gray-500 mt-20">Not found</p>;
+export function ProductDetail({ product }: { product: Product }) {
+  const { handleAddToCart } = useOrders();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-pink-50 py-16 px-6 flex justify-center">
-      <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-4xl flex flex-col md:flex-row items-center gap-10 transition-all duration-500 hover:shadow-pink-200/70 hover:-translate-y-1">
-        {/* Product Image */}
-        <div className="flex-1 flex justify-center">
-          <div className="relative w-72 h-72 md:w-96 md:h-96">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 transition-all duration-300">
+        <div className="relative bg-gray-50 p-6 flex items-center justify-center">
+          <div className="relative w-64 h-64 md:w-80 md:h-80">
             <Image
-              src={product.image || noImg}
+              src={product.image}
               alt={product.title}
               fill
-              sizes="(max-width: 768px) 100vw, 40vw"
-              className="object-contain rounded-2xl transition-transform duration-500 hover:scale-105"
+              className="object-contain"
+              priority
             />
           </div>
         </div>
-        <div className="flex-1 flex flex-col gap-4">
-          <h1 className="text-3xl font-extrabold text-gray-800 leading-tight">
-            {product.title}
-          </h1>
 
-          <div className="flex items-center gap-2 text-yellow-500">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                size={20}
-                className={
-                  i < Math.round(product.rating?.rate)
-                    ? "fill-yellow-400"
-                    : "fill-gray-200"
-                }
-              />
-            ))}
-            <span className="text-gray-600 ml-1 text-sm">
-              ({product.rating?.count} reviews)
-            </span>
+        <div className="p-8 space-y-6 flex flex-col justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-snug">
+              {product.title}
+            </h1>
+            <p className="text-gray-600 text-sm mt-2">{product.category}</p>
+
+            <div className="mt-4">
+              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">
+                Description
+              </p>
+              <p className="text-gray-700 text-sm leading-relaxed line-clamp-4">
+                {product.description}
+              </p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-xl text-center">
+                <p className="text-xs text-gray-500 uppercase mb-1">Price</p>
+                <p className="text-xl font-semibold text-blue-700">
+                  ${product.price}
+                </p>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-xl text-center">
+                <p className="text-xs text-gray-500 uppercase mb-1">Rating</p>
+                <p className="text-lg font-medium text-yellow-600">
+                  ⭐ {product.rating?.rate}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {product.rating?.count} reviews
+                </p>
+              </div>
+            </div>
           </div>
 
-          <p className="text-gray-600 leading-relaxed text-base">
-            {product.description}
-          </p>
-
-          <p className="text-2xl font-bold text-pink-600 mt-2">
-            {product.price} $
-          </p>
-
-          <div className="mt-6 flex gap-4">
-            <button className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 font-semibold  cursor-pointer">
-              🛒 Add to Cart
-            </button>
-          </div>
+          <button
+            onClick={() => handleAddToCart(product)}
+            className="mt-6 w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-xl font-semibold text-lg shadow-md transition-all duration-200"
+          >
+            Add to Cart
+          </button>
         </div>
       </div>
     </div>

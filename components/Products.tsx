@@ -1,85 +1,118 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
-import noImg from "@/public/no-image.png";
-
-interface Product {
-  id: number;
-  title: string;
-  price: number;
-  image: string;
-}
+import Link from "next/link";
+import { useProducts } from "@/context/ProductContext";
+import { useMemo, useState } from "react";
+import { useOrders } from "@/context/OrderContext";
 
 export function Products() {
-  const [list, setList] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { products, loading, error } = useProducts();
+  const { handleAddToCart } = useOrders();
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(products.length / itemsPerPage);
 
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch("https://fakestoreapi.com/products");
-        if (!res.ok) throw new Error("Failed to fetch products");
-        const data = await res.json();
-        setList(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const currentProducts = useMemo(() => {
+    const start = (page - 1) * itemsPerPage;
+    return products.slice(start, start + itemsPerPage);
+  }, [page, products]);
 
-    fetchProducts();
-  }, []);
+  const pagesArr = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const prev = () => setPage((p) => Math.max(p - 1, 1));
+  const next = () => setPage((p) => Math.min(p + 1, totalPages));
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-gray-500 text-lg animate-pulse">
-          Loading products...
-        </div>
-      </div>
+      <p className="text-center text-gray-500 text-lg mt-20">Loading...</p>
     );
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+  if (error)
+    return (
+      <p className="text-center text-red-500 font-medium mt-20">
+        Error: {error}
+      </p>
+    );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 py-16 px-6">
-     
-
-      <ul className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
-        {list.map((p) => (
-          <li
-            key={p.id}
-            className="group bg-white shadow-lg rounded-2xl p-5 flex flex-col items-center justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border border-gray-100"
-          >
-            <Link
-              href={`/products/${p.id}`}
-              className="w-full flex flex-col items-center"
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {currentProducts.map((product) => (
+            <li
+              key={product.id}
+              className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col"
             >
-              <div className="relative w-full h-64">
-                <Image
-                  src={p.image || noImg}
-                  alt={p.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 25vw"
-                  className="object-contain rounded-xl transition-transform duration-300 group-hover:scale-110"
-                />
+              <Link href={`/products/${product.id}`} className="group">
+                <div className="relative w-full h-64 bg-gray-100 rounded-t-2xl overflow-hidden">
+                  <Image
+                    src={product.image}
+                    alt={product.title}
+                    fill
+                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                    priority
+                  />
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 min-h-[3rem]">
+                    {product.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Price: <span className="font-bold">${product.price}</span>
+                  </p>
+                  {product.rating && (
+                    <p className="text-sm text-yellow-600">
+                      ⭐ {product.rating.rate}{" "}
+                      <span className="text-gray-500">
+                        ({product.rating.count})
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </Link>
+              <div className="mt-auto px-4 pb-4">
+                <button
+                  onClick={() => handleAddToCart(product)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl font-medium transition-colors duration-200"
+                >
+                  Add to Cart
+                </button>
               </div>
-              <div className="mt-5 text-center">
-                <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 mb-2 group-hover:text-pink-600 transition-colors">
-                  {p.title}
-                </h3>
-                <p className="text-xl font-bold text-pink-600">{p.price} $</p>
-              </div>
-            </Link>
-            <button className="mt-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-md hover:from-pink-600 hover:to-purple-600 transition-all duration-300  cursor-pointer">
-              Add to Cart
+            </li>
+          ))}
+        </ul>
+
+        {pagesArr.length > 1 && (
+          <div className="mt-10 flex justify-center items-center gap-2">
+            <button
+              onClick={prev}
+              disabled={page === 1}
+              className="px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              &lt;
             </button>
-          </li>
-        ))}
-      </ul>
+            {pagesArr.map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`px-3 py-1 rounded-md text-sm font-medium ${
+                  page === p
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={next}
+              disabled={page === totalPages}
+              className="px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              &gt;
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
